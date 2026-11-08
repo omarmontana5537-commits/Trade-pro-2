@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TradePro Academy</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    body { margin: 0; background-color: #0f172a; font-family: system-ui, sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function App() {
+      const [activeTab, setActiveTab] = useState('learn');
+      const [xp, setXp] = useState(0);
+      const [level, setLevel] = useState(1);
+      const [streak, setStreak] = useState(1);
+      const [unlockedBadges, setUnlockedBadges] = useState([]);
+      const [balance, setBalance] = useState(10000);
+      const [position, setPosition] = useState(null);
+      const [price, setPrice] = useState(100.00);
+      const [candles, setCandles] = useState([100.00]);
+      const [currentQuiz, setCurrentQuiz] = useState(0);
+      const [selectedAnswer, setSelectedAnswer] = useState(null);
+      const [showExplanation, setShowExplanation] = useState(false);
+
+      useEffect(() => {
+        const savedXp = localStorage.getItem('tradePro_xp');
+        const savedLevel = localStorage.getItem('tradePro_level');
+        const savedBadges = localStorage.getItem('tradePro_badges');
+        if (savedXp) setXp(parseInt(savedXp));
+        if (savedLevel) setLevel(parseInt(savedLevel));
+        if (savedBadges) setUnlockedBadges(JSON.parse(savedBadges));
+      }, []);
+
+      const addXP = (amount) => {
+        const newXp = xp + amount;
+        setXp(newXp);
+        localStorage.setItem('tradePro_xp', newXp);
+        const newLevel = Math.floor(newXp / 100) + 1;
+        if (newLevel > level) {
+          setLevel(newLevel);
+          localStorage.setItem('tradePro_level', newLevel);
+          alert(`🎉 FEEST! Je bent gestegen naar Level ${newLevel}!`);
+        }
+      };
+
+      const unlockBadge = (badgeId) => {
+        if (!unlockedBadges.includes(badgeId)) {
+          const updated = [...unlockedBadges, badgeId];
+          setUnlockedBadges(updated);
+          localStorage.setItem('tradePro_badges', JSON.stringify(updated));
+        }
+      };
+
+      const quizzes = [
+        {
+          title: 'Support & Resistance Sweep',
+          description: 'De prijs breekt nipt onder een belangrijk support level en schiet direct weer omhoog. Wat gebeurt hier?',
+          options: [
+            { text: 'A. Bullish Signal (Liquidity Sweep)', correct: true },
+            { text: 'B. Bearish Breakout (Ga Short)', correct: false },
+            { text: 'C. Markt is gestopt', correct: false }
+          ],
+          explanation: 'Dit is een klassieke Liquidity Sweep! Smart Money drukt de prijs bewust onder support om Stop Losses te triggeren voordat ze stijgen.'
+        },
+        {
+          title: 'Fair Value Gap (FVG)',
+          description: 'Er ontstaat een grote explosieve groene candle waarbij de 1e en 3e candle elkaar niet raken. Wat verwacht je?',
+          options: [
+            { text: 'A. Direct verkopen (Short)', correct: false },
+            { text: 'B. Wachten tot de prijs terugzakt in de gap (Retest)', correct: true },
+            { text: 'C. Niks doen', correct: false }
+          ],
+          explanation: 'Fair Value Gaps trekken de prijs aan als een magneet. Je wacht op een retest in de gap om vervolgens te kopen.'
+        }
+      ];
+
+      const badgesList = [
+        { id: 'first_quiz', name: 'Brainiac Trader', icon: '🧠', desc: 'Eerste quiz afgerond' },
+        { id: 'first_trade', name: 'Wall Street Rookie', icon: '📈', desc: 'Eerste trade geplaatst' }
+      ];
+
+      const tickMarket = () => {
+        const change = (Math.random() - 0.48) * 2;
+        const newPrice = Math.max(10, parseFloat((price + change).toFixed(2)));
+        setPrice(newPrice);
+        setCandles(prev => [...prev.slice(-15), newPrice]);
+      };
+
+      const openPosition = (type) => {
+        setPosition({ type, entry: price, size: 10 });
+        unlockBadge('first_trade');
+        addXP(20);
+      };
+
+      const closePosition = () => {
+        const pnl = position.type === 'LONG' ? (price - position.entry) * position.size : (position.entry - price) * position.size;
+        setBalance(prev => prev + pnl);
+        setPosition(null);
+        alert(`Positie gesloten met ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}`);
+      };
+
+      return (
+        <div style={{ color: '#f8fafc', minHeight: '100vh', padding: '15px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', backgroundColor: '#1e293b', padding: '15px', borderRadius: '12px', marginBottom: '15px' }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: '18px', color: '#38bdf8' }}>TradePro Academy</h2>
+              <span style={{ fontSize: '12px', color: '#94a3b8' }}>Lvl {level} | XP: {xp}</span>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <span style={{ backgroundColor: '#334155', padding: '6px 10px', borderRadius: '20px', fontSize: '12px' }}>🔥 {streak}d</span>
+              <span style={{ backgroundColor: '#059669', padding: '6px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>${balance.toFixed(0)}</span>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+            {['learn', 'quiz', 'simulator', 'trophies'].map((tab) => (
+              <button key={tab} onClick={() => setActiveTab(tab)} style={{ flex: 1, padding: '10px 4px', borderRadius: '8px', border: 'none', backgroundColor: activeTab === tab ? '#0284c7' : '#334155', color: 'white', fontSize: '11px', fontWeight: 'bold' }}>
+                {tab.toUpperCase()}
+              </button>
+            ))}
+          </div>
+
+          {activeTab === 'learn' && (
+            <div>
+              <h3 style={{ color: '#38bdf8' }}>📚 SMC Trading Masterclass</h3>
+              <div style={{ backgroundColor: '#1e293b', padding: '15px', borderRadius: '10px', marginBottom: '10px' }}>
+                <h4>1. Order Blocks (OB)</h4>
+                <p style={{ fontSize: '13px', color: '#cbd5e1' }}>Een Order Block is de laatste tegengestelde candle voor een grote institutionele beweging. Banken plaatsen hier miljarden orders.</p>
+              </div>
+              <div style={{ backgroundColor: '#1e293b', padding: '15px', borderRadius: '10px' }}>
+                <h4>2. Liquidity Sweeps</h4>
+                <p style={{ fontSize: '13px', color: '#cbd5e1' }}>Marktmakers jagen op Stop Losses boven of onder toppen/bodems om liquiditeit te pakken.</p>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'quiz' && (
+            <div style={{ backgroundColor: '#1e293b', padding: '15px', borderRadius: '12px' }}>
+              <h3>🎯 Quiz: {quizzes[currentQuiz].title}</h3>
+              <p style={{ fontSize: '14px', color: '#cbd5e1' }}>{quizzes[currentQuiz].description}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', margin: '20px 0' }}>
+                {quizzes[currentQuiz].options.map((opt, i) => (
+                  <button key={i} onClick={() => { setSelectedAnswer(i); setShowExplanation(true); if(opt.correct){ addXP(50); unlockBadge('first_quiz'); } }} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #475569', backgroundColor: selectedAnswer === i ? (opt.correct ? '#15803d' : '#b91c1c') : '#0f172a', color: 'white', textAlign: 'left' }}>
+                    {opt.text}
+                  </button>
+                ))}
+              </div>
+              {showExplanation && (
+                <div style={{ backgroundColor: '#0f172a', padding: '12px', borderRadius: '8px', borderLeft: '4px solid #38bdf8' }}>
+                  <p style={{ fontSize: '12px', margin: 0 }}>💡 {quizzes[currentQuiz].explanation}</p>
+                  <button onClick={() => { setShowExplanation(false); setSelectedAnswer(null); setCurrentQuiz((prev) => (prev + 1) % quizzes.length); }} style={{ marginTop: '10px', backgroundColor: '#0284c7', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px' }}>
+                    Volgende Vraag
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'simulator' && (
+            <div style={{ backgroundColor: '#1e293b', padding: '15px', borderRadius: '12px' }}>
+              <h3>📈 Paper Trading Simulator</h3>
+              <p style={{ fontSize: '14px' }}>Prijs: <strong style={{ color: '#38bdf8' }}>${price}</strong></p>
+              <div style={{ height: '100px', display: 'flex', alignItems: 'flex-end', gap: '4px', backgroundColor: '#0f172a', padding: '10px', borderRadius: '8px', marginBottom: '15px' }}>
+                {candles.map((c, i) => (
+                  <div key={i} style={{ flex: 1, backgroundColor: c >= (candles[i-1] || c) ? '#22c55e' : '#ef4444', height: `${Math.min(100, Math.max(10, (c - 90) * 5))}%`, borderRadius: '2px' }} />
+                ))}
+              </div>
+              <button onClick={tickMarket} style={{ width: '100%', padding: '10px', backgroundColor: '#475569', color: 'white', border: 'none', borderRadius: '6px', marginBottom: '10px' }}>▶️ Volgende Candle</button>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={() => openPosition('LONG')} style={{ flex: 1, padding: '12px', backgroundColor: '#22c55e', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold' }}>BUY / LONG</button>
+                <button onClick={() => openPosition('SHORT')} style={{ flex: 1, padding: '12px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold' }}>SELL / SHORT</button>
+              </div>
+              {position && (
+                <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#0f172a', borderRadius: '8px' }}>
+                  <p style={{ margin: 0, fontSize: '12px' }}>Positie: {position.type} op ${position.entry}</p>
+                  <button onClick={closePosition} style={{ marginTop: '8px', width: '100%', backgroundColor: '#eab308', color: 'black', border: 'none', padding: '8px', borderRadius: '4px', fontWeight: 'bold' }}>Sluit Positie</button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'trophies' && (
+            <div>
+              <h3>🏆 Trofeeën Kast</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                {badgesList.map((badge) => {
+                  const isUnlocked = unlockedBadges.includes(badge.id);
+                  return (
+                    <div key={badge.id} style={{ backgroundColor: isUnlocked ? '#1e293b' : '#0f172a', padding: '12px', borderRadius: '10px', border: isUnlocked ? '1px solid #eab308' : '1px solid #334155', opacity: isUnlocked ? 1 : 0.4, textAlign: 'center' }}>
+                      <div style={{ fontSize: '30px' }}>{badge.icon}</div>
+                      <div style={{ fontWeight: 'bold', fontSize: '12px' }}>{badge.name}</div>
+                      <div style={{ fontSize: '10px', color: '#94a3b8' }}>{badge.desc}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>
